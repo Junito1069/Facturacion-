@@ -1,0 +1,1807 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ERP Educativo - Sistema de Facturación</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script type="module" src="firebase.js"></script>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: 'Inter', sans-serif;
+      --bg: #0f172a;
+      --surface: #111827;
+      --surface-soft: #1f2937;
+      --text: #e2e8f0;
+      --text-muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent-strong: #0ea5e9;
+      --success: #22c55e;
+      --warning: #fb923c;
+      --danger: #f87171;
+      --border: rgba(148, 163, 184, 0.16);
+      --shadow: 0 24px 80px rgba(15, 23, 42, 0.25);
+    }
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: radial-gradient(circle at top, rgba(56,189,248,0.14), transparent 36%),
+        radial-gradient(circle at 15% 20%, rgba(16,185,129,0.15), transparent 28%),
+        var(--bg);
+      color: var(--text);
+    }
+    button, input, select, textarea {
+      font: inherit;
+    }
+    .app {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      min-height: 100vh;
+    }
+    .sidebar {
+      background: rgba(15, 23, 42, 0.94);
+      border-right: 1px solid var(--border);
+      padding: 28px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .brand-dot {
+      width: 12px;
+      height: 12px;
+      background: var(--accent);
+      border-radius: 999px;
+    }
+    .brand h1 {
+      margin: 0;
+      font-size: 1.1rem;
+      letter-spacing: -0.02em;
+    }
+    .sidebar nav {
+      display: grid;
+      gap: 10px;
+    }
+    .nav-item {
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      color: var(--text);
+      text-decoration: none;
+      cursor: pointer;
+      transition: background 0.2s ease, color 0.2s ease;
+    }
+    .nav-item.active, .nav-item:hover {
+      background: rgba(56,189,248,0.15);
+      color: #fff;
+    }
+    .nav-item span {
+      font-size: 0.95rem;
+    }
+    .sidebar .section-title {
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.18em;
+      color: var(--text-muted);
+      margin: 0;
+    }
+    .main {
+      padding: 28px 32px;
+    }
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      align-items: center;
+      margin-bottom: 26px;
+      flex-wrap: wrap;
+    }
+    .topbar h2 {
+      margin: 0;
+      font-size: clamp(1.6rem, 2.2vw, 2.3rem);
+    }
+    .topbar .user-panel {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 12px 16px;
+    }
+    .topbar .user-panel span {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+    .topbar .user-panel strong {
+      color: var(--text);
+    }
+    .content {
+      display: grid;
+      gap: 22px;
+    }
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 18px;
+    }
+    .card {
+      background: rgba(15, 23, 42, 0.92);
+      border: 1px solid rgba(148,163,184,0.12);
+      border-radius: 24px;
+      padding: 20px;
+      box-shadow: var(--shadow);
+      min-height: 120px;
+    }
+    .card h3 {
+      margin: 0 0 10px;
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      letter-spacing: 0.03em;
+    }
+    .card p {
+      margin: 0;
+      font-size: 2rem;
+      font-weight: 700;
+    }
+    .card small {
+      display: block;
+      margin-top: 8px;
+      color: var(--text-muted);
+    }
+    .panel {
+      background: rgba(15,23,42,0.9);
+      border: 1px solid var(--border);
+      border-radius: 28px;
+      padding: 26px;
+      box-shadow: var(--shadow);
+    }
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 14px;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .panel-header h3 {
+      margin: 0;
+      font-size: 1.1rem;
+    }
+    .panel-header .panel-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .btn, .btn-link {
+      border: none;
+      border-radius: 14px;
+      padding: 10px 16px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: transform 0.18s ease, background 0.2s ease;
+    }
+    .btn:hover, .btn-link:hover {
+      transform: translateY(-1px);
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+      color: #0f172a;
+      font-weight: 600;
+    }
+    .btn-secondary {
+      background: rgba(148,163,184,0.14);
+      color: var(--text);
+    }
+    .btn-danger {
+      background: #f87171;
+      color: #111827;
+    }
+    .btn-success {
+      background: #22c55e;
+      color: #0f172a;
+    }
+    .btn-warning {
+      background: #fb923c;
+      color: #111827;
+    }
+    .btn-link {
+      background: transparent;
+      color: var(--text);
+      padding: 0;
+    }
+    .row {
+      display: grid;
+      gap: 18px;
+    }
+    .grid-2 {
+      grid-template-columns: 1.2fr 0.8fr;
+    }
+    .grid-3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    label {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+    input, select, textarea {
+      width: 100%;
+      border-radius: 16px;
+      border: 1px solid rgba(148,163,184,0.16);
+      background: rgba(255,255,255,0.03);
+      color: var(--text);
+      padding: 14px 16px;
+      outline: none;
+      transition: border 0.2s ease, box-shadow 0.2s ease;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: rgba(56,189,248,0.9);
+      box-shadow: 0 0 0 4px rgba(56,189,248,0.12);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.95rem;
+    }
+    th, td {
+      padding: 14px 12px;
+      text-align: left;
+      border-bottom: 1px solid rgba(148,163,184,0.08);
+    }
+    th {
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+    tr:hover {
+      background: rgba(255,255,255,0.03);
+    }
+    .badge {
+      display: inline-flex;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 0.76rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+    .badge.active { background: rgba(34,197,94,0.12); color: #22c55e; }
+    .badge.inactive { background: rgba(248,113,113,0.12); color: #f87171; }
+    .badge.paid { background: rgba(34,197,94,0.12); color: #22c55e; }
+    .badge.pending { background: rgba(251,146,60,0.12); color: #fb923c; }
+    .badge.overdue { background: rgba(248,113,113,0.12); color: #f87171; }
+    .hidden { display: none !important; }
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.92);
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      z-index: 10;
+    }
+    .modal {
+      width: min(900px, 100%);
+      background: rgba(15, 23, 42, 0.98);
+      border: 1px solid rgba(148,163,184,0.16);
+      border-radius: 28px;
+      padding: 28px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .modal h3 {
+      margin-top: 0;
+    }
+    .modal-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 22px;
+    }
+    .modal-close {
+      position: absolute;
+      top: 18px;
+      right: 18px;
+      width: 40px;
+      height: 40px;
+      border-radius: 999px;
+      border: none;
+      background: rgba(148,163,184,0.12);
+      color: var(--text);
+      cursor: pointer;
+    }
+    .login-screen {
+      position: fixed;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(15,23,42,0.96), rgba(15,23,42,0.98));
+      display: grid;
+      place-items: center;
+      z-index: 20;
+      padding: 24px;
+    }
+    .login-card {
+      width: min(480px, 100%);
+      background: rgba(17,24,39,0.96);
+      border: 1px solid rgba(148,163,184,0.14);
+      border-radius: 32px;
+      padding: 34px;
+      box-shadow: var(--shadow);
+    }
+    .login-card h2 {
+      margin: 0 0 8px;
+    }
+    .login-card p {
+      color: var(--text-muted);
+      margin: 0 0 24px;
+    }
+    .login-options {
+      display: grid;
+      gap: 16px;
+    }
+    .sidebar-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 9;
+      display: none;
+    }
+    .sidebar-backdrop:not(.hidden) {
+      display: block;
+    }
+    @media (max-width: 1080px) {
+      .app { grid-template-columns: 1fr; }
+      .sidebar { flex-direction: row; overflow-x: auto; padding: 20px 16px; }
+      .nav-item { white-space: nowrap; }
+      .topbar { flex-direction: column; align-items: stretch; }
+      .card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .modal-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 768px) {
+      .hamburger { display: block; }
+      .sidebar {
+        position: fixed;
+        left: -260px;
+        top: 0;
+        height: 100vh;
+        z-index: 10;
+        flex-direction: column;
+        padding: 28px 20px;
+      }
+      .sidebar.open {
+        left: 0;
+      }
+      .app { grid-template-columns: 1fr; }
+      .main { padding: 20px 16px; }
+      .topbar { padding: 16px; }
+      .panel { padding: 16px; }
+      .modal { padding: 20px; }
+    }
+    @media (max-width: 720px) {
+      .card-grid { grid-template-columns: 1fr; }
+      .panel { padding: 20px; }
+      .sidebar { padding: 16px; }
+    }
+    @media (max-width: 480px) {
+      .topbar h2 { font-size: 1.5rem; }
+      .card p { font-size: 1.5rem; }
+      .btn { padding: 12px 18px; font-size: 1rem; }
+      .panel table { overflow-x: auto; white-space: nowrap; }
+      .modal { width: 95%; padding: 16px; }
+      .login-card { width: 90%; padding: 24px; }
+      .sidebar { width: 250px; }
+      .main { padding: 16px 12px; }
+      .topbar { padding: 12px; gap: 12px; }
+      .panel { padding: 12px; }
+      .card { padding: 16px; min-height: 100px; }
+      .modal-grid { gap: 16px; }
+      .grid-2 { grid-template-columns: 1fr; }
+      .grid-3 { grid-template-columns: 1fr; }
+    }
+
+    /* Notificaciones elegantes */
+    .notification {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 16px 24px;
+      border-radius: 8px;
+      font-weight: 500;
+      z-index: 10000;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      animation: slideIn 0.3s ease-out, slideOut 0.3s ease-in 2.7s forwards;
+      max-width: 400px;
+    }
+
+    .notification.success {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      border-left: 4px solid #047857;
+    }
+
+    .notification.error {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      color: white;
+      border-left: 4px solid #b91c1c;
+    }
+
+    .notification.warning {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      color: white;
+      border-left: 4px solid #b45309;
+    }
+
+    @keyframes slideIn {
+      from {
+        transform: translateX(400px);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    @keyframes slideOut {
+      to {
+        transform: translateX(400px);
+        opacity: 0;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .notification {
+        right: 10px;
+        left: 10px;
+        max-width: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="login-screen" id="loginScreen">
+    <div class="login-card">
+      <h2>Ingreso al ERP Educativo</h2>
+      <p>Selecciona tu rol para acceder al sistema. Roles: administrador, caja, contabilidad.</p>
+      <div class="login-options">
+        <button class="btn btn-primary" onclick="login('administrador')">Administrador</button>
+        <button class="btn btn-secondary" onclick="login('caja')">Caja</button>
+        <button class="btn btn-secondary" onclick="login('contabilidad')">Contabilidad</button>
+      </div>
+      <div class="footer-note">Este prototipo funciona completamente en el navegador usando localStorage.</div>
+    </div>
+  </div>
+  <div class="app hidden" id="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-dot"></div>
+        <div>
+          <h1>EDU-ERP</h1>
+          <small>Sistema de Facturación</small>
+        </div>
+      </div>
+      <p class="section-title">Navegación</p>
+      <nav>
+        <div class="nav-item active" data-section="dashboard" onclick="switchSection('dashboard', this)">
+          <span>Dashboard</span>
+        </div>
+        <div class="nav-item" data-section="students" onclick="switchSection('students', this)">
+          <span>Estudiantes</span>
+        </div>
+        <div class="nav-item" data-section="invoices" onclick="switchSection('invoices', this)">
+          <span>Facturación</span>
+        </div>
+        <div class="nav-item" data-section="payments" onclick="switchSection('payments', this)">
+          <span>Pagos</span>
+        </div>
+        <div class="nav-item" data-section="reports" onclick="switchSection('reports', this)">
+          <span>Reportes</span>
+        </div>
+        <div class="nav-item" data-section="users" onclick="switchSection('users', this)" id="usersNav">
+          <span>Usuarios</span>
+        </div>
+      </nav>
+    </aside>
+    <main class="main">
+      <div class="topbar">
+        <button class="hamburger btn btn-secondary" onclick="toggleSidebar()">☰</button>
+        <div>
+          <h2 id="pageTitle">Dashboard</h2>
+          <p id="pageSubtitle">Resumen financiero y control rápido del ERP educativo.</p>
+        </div>
+        <div class="user-panel">
+          <div>
+            <div style="font-size:0.85rem; color:var(--text-muted);">Usuario</div>
+            <strong id="userRoleLabel">Administrador</strong>
+          </div>
+          <button class="btn btn-secondary" onclick="logout()">Cerrar sesión</button>
+        </div>
+      </div>
+      <div class="content">
+        <section class="panel" id="dashboardSection">
+          <div class="panel-header">
+            <div>
+              <h3>Panel financiero</h3>
+              <p style="color:var(--text-muted); margin: 4px 0 0;">Toma decisiones con métricas actualizadas.</p>
+            </div>
+            <div class="panel-actions">
+              <button class="btn btn-warning" onclick="generateMonthlyBilling()">Facturación mensual</button>
+              <button class="btn btn-secondary" onclick="downloadBackup()">Exportar respaldo</button>
+            </div>
+          </div>
+          <div class="card-grid">
+            <div class="card">
+              <h3>Total estudiantes</h3>
+              <p id="metricStudents">0</p>
+              <small>Activos e inactivos</small>
+            </div>
+            <div class="card">
+              <h3>Facturas emitidas</h3>
+              <p id="metricInvoices">0</p>
+              <small>NCF y documentos fiscales</small>
+            </div>
+            <div class="card">
+              <h3>Ingresos registrados</h3>
+              <p id="metricIncome">$0.00</p>
+              <small>Pagos confirmados</small>
+            </div>
+            <div class="card">
+              <h3>Balance pendiente</h3>
+              <p id="metricPending">$0.00</p>
+              <small>Cuotas por cobrar</small>
+            </div>
+          </div>
+        </section>
+        <section class="panel hidden" id="studentsSection">
+          <div class="panel-header">
+            <div>
+              <h3>Gestión de estudiantes</h3>
+              <p style="color:var(--text-muted); margin: 4px 0 0;">Crea, edita, elimina y filtra alumnos según estado.</p>
+            </div>
+            <div class="panel-actions">
+              <button class="btn btn-primary" onclick="openStudentModal()">Nuevo estudiante</button>
+            </div>
+          </div>
+          <div class="row">
+            <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-bottom:14px;">
+              <input id="studentSearch" type="text" placeholder="Buscar por nombre o curso" oninput="renderStudentTable()" style="max-width:420px;" />
+              <select id="studentFilter" onchange="renderStudentTable()" style="width:180px;">
+                <option value="all">Todos los estados</option>
+                <option value="activo">Activo</option>
+                <option value="inactivo">Inactivo</option>
+              </select>
+            </div>
+            <div class="panel">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Nombre</th>
+                    <th>Curso</th>
+                    <th>Tutor</th>
+                    <th>Teléfono</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="studentsTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+        <section class="panel hidden" id="invoicesSection">
+          <div class="panel-header">
+            <div>
+              <h3>Facturación</h3>
+              <p style="color:var(--text-muted); margin: 4px 0 0;">Genera facturas, NCF fiscal, exporta PDF y revisa documentos recientes.</p>
+            </div>
+            <div class="panel-actions">
+              <button class="btn btn-primary" onclick="openInvoiceModal()">Nueva factura</button>
+            </div>
+          </div>
+          <div class="row">
+            <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-bottom:14px;">
+              <input id="invoiceSearch" type="text" placeholder="Buscar por estudiante, concepto o NCF" oninput="renderInvoiceTable()" style="max-width:420px;" />
+              <button class="btn btn-secondary" onclick="printInvoiceReport()">Reporte rápido</button>
+            </div>
+            <div class="panel">
+              <table>
+                <thead>
+                  <tr>
+                    <th>#Factura</th>
+                    <th>NCF</th>
+                    <th>Estudiante</th>
+                    <th>Fecha</th>
+                    <th>Concepto</th>
+                    <th>Monto</th>
+                    <th>Saldo</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="invoicesTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+        <section class="panel hidden" id="paymentsSection">
+          <div class="panel-header">
+            <div>
+              <h3>Pagos</h3>
+              <p style="color:var(--text-muted); margin: 4px 0 0;">Registra pagos parciales o completos y actualiza el balance pendiente.</p>
+            </div>
+            <div class="panel-actions">
+              <button class="btn btn-primary" onclick="openPaymentModal()">Registrar pago</button>
+            </div>
+          </div>
+          <div class="row">
+            <div class="panel">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Factura</th>
+                    <th>Estudiante</th>
+                    <th>Fecha pago</th>
+                    <th>Metodo</th>
+                    <th>Monto</th>
+                  </tr>
+                </thead>
+                <tbody id="paymentsTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+        <section class="panel hidden" id="reportsSection">
+          <div class="panel-header">
+            <div>
+              <h3>Reportes</h3>
+              <p style="color:var(--text-muted); margin: 4px 0 0;">Informe de ingresos, estudiantes morosos y flujo de caja por fecha.</p>
+            </div>
+            <div class="panel-actions">
+              <button class="btn btn-secondary" onclick="renderReports()">Actualizar reportes</button>
+            </div>
+          </div>
+          <div class="grid-3" style="gap:18px; margin-bottom:18px;">
+            <div>
+              <label>Fecha inicio</label>
+              <input id="reportStart" type="date" value="" />
+            </div>
+            <div>
+              <label>Fecha fin</label>
+              <input id="reportEnd" type="date" value="" />
+            </div>
+            <div style="align-self:flex-end;">
+              <button class="btn btn-primary" onclick="renderReports()">Filtrar</button>
+            </div>
+          </div>
+          <div class="card-grid">
+            <div class="card"><h3>Ingresos</h3><p id="reportIncome">$0.00</p></div>
+            <div class="card"><h3>Morosos</h3><p id="reportOverdue">0 estudiantes</p></div>
+            <div class="card"><h3>Facturas totales</h3><p id="reportInvoices">0</p></div>
+          </div>
+          <div style="margin-top:22px;">
+            <h3 style="margin-bottom:14px;">Estudiantes con saldo</h3>
+            <div class="panel">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Estudiante</th>
+                    <th>Curso</th>
+                    <th>Saldo pendiente</th>
+                    <th>Última factura</th>
+                  </tr>
+                </thead>
+                <tbody id="reportStudentsBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+        <section class="panel hidden" id="usersSection">
+          <div class="panel-header">
+            <div>
+              <h3>Usuarios y roles</h3>
+              <p style="color:var(--text-muted); margin: 4px 0 0;">Administra perfiles y permisos de acceso.</p>
+            </div>
+            <div class="panel-actions">
+              <button class="btn btn-primary" onclick="openUserModal()">Agregar usuario</button>
+            </div>
+          </div>
+          <div class="panel">
+            <table>
+              <thead>
+                <tr>
+                  <th>Usuario</th>
+                  <th>Rol</th>
+                  <th>Estado</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="usersTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <div class="sidebar-backdrop hidden" onclick="toggleSidebar()"></div>
+
+  <div class="modal-backdrop hidden" id="studentModalBackdrop">
+    <div class="modal">
+      <button class="modal-close" onclick="closeStudentModal()">✕</button>
+      <h3 id="studentModalTitle">Nuevo estudiante</h3>
+      <div class="modal-grid">
+        <div>
+          <label>Nombre completo</label>
+          <input id="studentName" type="text" placeholder="Ej. Juan Pérez" />
+        </div>
+        <div>
+          <label>Curso</label>
+          <input id="studentCourse" type="text" placeholder="Ej. 10° Básico" />
+        </div>
+        <div>
+          <label>Tutor</label>
+          <input id="studentTutor" type="text" placeholder="Ej. María Rodríguez" />
+        </div>
+        <div>
+          <label>Teléfono</label>
+          <input id="studentPhone" type="text" placeholder="Ej. 809-123-4567" />
+        </div>
+        <div>
+          <label>Estado</label>
+          <select id="studentStatus">
+            <option value="activo">Activo</option>
+            <option value="inactivo">Inactivo</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-top:20px; display:flex; gap:12px; justify-content:flex-end;">
+        <button class="btn btn-secondary" onclick="closeStudentModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="saveStudent()">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop hidden" id="invoiceModalBackdrop">
+    <div class="modal">
+      <button class="modal-close" onclick="closeInvoiceModal()">✕</button>
+      <h3 id="invoiceModalTitle">Nueva factura</h3>
+      <div class="modal-grid">
+        <div>
+          <label>Estudiante</label>
+          <select id="invoiceStudent"></select>
+        </div>
+        <div>
+          <label>Fecha</label>
+          <input id="invoiceDate" type="date" />
+        </div>
+        <div>
+          <label>Concepto</label>
+          <select id="invoiceConcept">
+            <option value="Mensualidad">Mensualidad</option>
+            <option value="Inscripción">Inscripción</option>
+            <option value="Materiales">Materiales</option>
+            <option value="Examen">Examen</option>
+          </select>
+        </div>
+        <div>
+          <label>Monto</label>
+          <input id="invoiceAmount" type="number" min="0" step="0.01" placeholder="0.00" />
+        </div>
+        <div>
+          <label>NCF</label>
+          <input id="invoiceNCF" type="text" readonly />
+        </div>
+      </div>
+      <div style="margin-top:20px; display:flex; gap:12px; justify-content:flex-end;">
+        <button class="btn btn-secondary" onclick="closeInvoiceModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="saveInvoice()">Generar factura</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop hidden" id="paymentModalBackdrop">
+    <div class="modal">
+      <button class="modal-close" onclick="closePaymentModal()">✕</button>
+      <h3>Registrar pago</h3>
+      <div class="modal-grid">
+        <div>
+          <label>Factura</label>
+          <select id="paymentInvoice"></select>
+        </div>
+        <div>
+          <label>Monto pago</label>
+          <input id="paymentAmount" type="number" min="0" step="0.01" placeholder="0.00" />
+        </div>
+        <div>
+          <label>Medio</label>
+          <select id="paymentMethod">
+            <option value="Efectivo">Efectivo</option>
+            <option value="Transferencia">Transferencia</option>
+            <option value="Tarjeta">Tarjeta</option>
+          </select>
+        </div>
+        <div>
+          <label>Fecha de pago</label>
+          <input id="paymentDate" type="date" />
+        </div>
+      </div>
+      <div style="margin-top:20px; display:flex; gap:12px; justify-content:flex-end;">
+        <button class="btn btn-secondary" onclick="closePaymentModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="savePayment()">Registrar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop hidden" id="userModalBackdrop">
+    <div class="modal">
+      <button class="modal-close" onclick="closeUserModal()">✕</button>
+      <h3>Nuevo usuario</h3>
+      <div class="modal-grid">
+        <div>
+          <label>Nombre de usuario</label>
+          <input id="userName" type="text" placeholder="admin" />
+        </div>
+        <div>
+          <label>Rol</label>
+          <select id="userRole">
+            <option value="administrador">Administrador</option>
+            <option value="caja">Caja</option>
+            <option value="contabilidad">Contabilidad</option>
+          </select>
+        </div>
+        <div>
+          <label>Estado</label>
+          <select id="userStatus">
+            <option value="activo">Activo</option>
+            <option value="inactivo">Inactivo</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-top:20px; display:flex; gap:12px; justify-content:flex-end;">
+        <button class="btn btn-secondary" onclick="closeUserModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="saveUser()">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { db } from './firebase.js';
+    import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    console.log('db disponible:', typeof db !== 'undefined' ? 'SÍ' : 'NO');
+    
+    // Sistema híbrido: Firestore + localStorage como respaldo
+    const USE_FIRESTORE = typeof db !== 'undefined';
+    
+    console.log('Modo de almacenamiento:', USE_FIRESTORE ? 'FIRESTORE' : 'LOCALSTORAGE TEMPORARIO');
+    
+    const STORAGE_KEYS = {
+      students: 'students',
+      invoices: 'invoices',
+      payments: 'payments',
+      users: 'users',
+    };
+    
+    let currentRole = null;
+    let selectedStudentId = null;
+    let editingStudentId = null;
+    let editingInvoiceId = null;
+    let editingUserId = null;
+
+    // Función para mostrar notificaciones elegantes
+    function showNotification(message, type = 'success') {
+      const notification = document.createElement('div');
+      notification.className = `notification ${type}`;
+      notification.textContent = message;
+      document.body.appendChild(notification);
+      
+      setTimeout(() => notification.remove(), 3000);
+    }
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      try {
+        console.log('Iniciando aplicación...');
+        await initializeStorage();
+        loadAppState();
+        renderAdminSections();
+        await refreshAll();
+        console.log('Aplicación iniciada correctamente');
+      } catch (error) {
+        console.error('Error al iniciar aplicación:', error);
+        showNotification('Error al conectar: ' + error.message, 'error');
+      }
+    });
+
+    async function initializeStorage() {
+      try {
+        console.log('Inicializando almacenamiento en Firestore...');
+        
+        // Check if students collection is empty, add defaults
+        const studentsRef = collection(db, STORAGE_KEYS.students);
+        const studentsSnapshot = await getDocs(studentsRef);
+        console.log('Estudiantes encontrados:', studentsSnapshot.size);
+        
+        if (studentsSnapshot.empty) {
+          console.log('Agregando estudiantes de ejemplo...');
+          await addDoc(studentsRef, {
+            name: 'Ariana López',
+            course: '10° Básico',
+            tutor: 'Carlos López',
+            phone: '809-555-1234',
+            status: 'activo',
+          });
+          await addDoc(studentsRef, {
+            name: 'Mateo Castro',
+            course: '8° Básico',
+            tutor: 'María Castro',
+            phone: '809-555-9876',
+            status: 'activo',
+          });
+          console.log('Estudiantes de ejemplo agregados');
+        }
+        
+        // Similarly for others, but for now, only students
+        const usersRef = collection(db, STORAGE_KEYS.users);
+        const usersSnapshot = await getDocs(usersRef);
+        console.log('Usuarios encontrados:', usersSnapshot.size);
+        
+        if (usersSnapshot.empty) {
+          console.log('Agregando usuarios de ejemplo...');
+          await addDoc(usersRef, {
+            username: 'admin',
+            role: 'administrador',
+            status: 'activo',
+          });
+          await addDoc(usersRef, {
+            username: 'caja',
+            role: 'caja',
+            status: 'activo',
+          });
+          await addDoc(usersRef, {
+            username: 'conta',
+            role: 'contabilidad',
+            status: 'activo',
+          });
+          console.log('Usuarios de ejemplo agregados');
+        }
+        console.log('Almacenamiento inicializado correctamente');
+      } catch (error) {
+        console.error('Error en initializeStorage:', error);
+        showNotification('Error al conectar: ' + error.message, 'warning');
+      }
+    }
+
+    function login(role) {
+      currentRole = role;
+      sessionStorage.setItem('eduERP_role', role);
+      document.getElementById('loginScreen').classList.add('hidden');
+      document.getElementById('app').classList.remove('hidden');
+      document.getElementById('userRoleLabel').textContent = capitalize(role);
+      renderAdminSections();
+      refreshAll();
+    }
+
+    function logout() {
+      currentRole = null;
+      sessionStorage.removeItem('eduERP_role');
+      document.getElementById('loginScreen').classList.remove('hidden');
+      document.getElementById('app').classList.add('hidden');
+    }
+
+    function loadAppState() {
+      const savedRole = sessionStorage.getItem('eduERP_role');
+      if (savedRole) login(savedRole);
+    }
+
+    function renderAdminSections() {
+      const usersNav = document.getElementById('usersNav');
+      const usersSection = document.getElementById('usersSection');
+      if (currentRole === 'administrador') {
+        usersNav.classList.remove('hidden');
+        usersSection.classList.remove('hidden');
+      } else {
+        usersNav.classList.add('hidden');
+        usersSection.classList.add('hidden');
+      }
+    }
+
+    function switchSection(section, element) {
+      document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+      element.classList.add('active');
+      document.querySelectorAll('section.panel').forEach(panel => panel.classList.add('hidden'));
+      document.getElementById(`${section}Section`).classList.remove('hidden');
+      document.getElementById('pageTitle').textContent = section === 'dashboard' ? 'Dashboard' : section === 'students' ? 'Estudiantes' : section === 'invoices' ? 'Facturación' : section === 'payments' ? 'Pagos' : section === 'reports' ? 'Reportes' : 'Usuarios';
+      document.getElementById('pageSubtitle').textContent = {
+        dashboard: 'Resumen financiero y control rápido del ERP educativo.',
+        students: 'Gestión completa del registro de estudiantes.',
+        invoices: 'Emite facturas y administra NCF fiscales.',
+        payments: 'Registra pagos y conciliaciones.',
+        reports: 'Reportes financieros e indicadores de caja.',
+        users: 'Control de perfiles y permisos.',
+      }[section];
+      if (section === 'students') renderStudentTable();
+      if (section === 'invoices') renderInvoiceTable();
+      if (section === 'payments') renderPaymentTable();
+      if (section === 'reports') renderReports();
+      if (section === 'users') renderUsersTable();
+      // Close sidebar on mobile after switching section
+      const sidebar = document.querySelector('.sidebar');
+      const backdrop = document.querySelector('.sidebar-backdrop');
+      sidebar.classList.remove('open');
+      backdrop.classList.add('hidden');
+    }
+
+    function toggleSidebar() {
+      const sidebar = document.querySelector('.sidebar');
+      const backdrop = document.querySelector('.sidebar-backdrop');
+      sidebar.classList.toggle('open');
+      backdrop.classList.toggle('hidden');
+    }
+
+    async function refreshAll() {
+      try {
+        console.log('Refrescando todos los datos...');
+        await renderMetrics();
+        await renderStudentTable();
+        await renderInvoiceTable();
+        await renderPaymentTable();
+        await renderReports();
+        await renderUsersTable();
+        console.log('Todos los datos refrescados');
+      } catch (error) {
+        console.error('Error al refrescar datos:', error);
+      }
+    }
+
+    async function getStudents() {
+      try {
+        if (!USE_FIRESTORE) {
+          console.log('Usando localStorage para getStudents');
+          const stored = localStorage.getItem('students_backup');
+          return stored ? JSON.parse(stored) : [];
+        }
+        
+        console.log('Conectando a Firestore...');
+        const querySnapshot = await getDocs(collection(db, 'students'));
+        const students = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        console.log('Estudiantes obtenidos:', students);
+        
+        // Respaldo en localStorage
+        localStorage.setItem('students_backup', JSON.stringify(students));
+        return students;
+      } catch (error) {
+        console.error('Error obteniendo estudiantes:', error);
+        // Respaldo a localStorage
+        const stored = localStorage.getItem('students_backup');
+        return stored ? JSON.parse(stored) : [];
+      }
+    }
+
+    async function getInvoices() {
+      try {
+        if (!USE_FIRESTORE) {
+          const stored = localStorage.getItem('invoices_backup');
+          return stored ? JSON.parse(stored) : [];
+        }
+        const querySnapshot = await getDocs(collection(db, 'invoices'));
+        const invoices = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        localStorage.setItem('invoices_backup', JSON.stringify(invoices));
+        return invoices;
+      } catch (error) {
+        console.error('Error obteniendo facturas:', error);
+        const stored = localStorage.getItem('invoices_backup');
+        return stored ? JSON.parse(stored) : [];
+      }
+    }
+
+    async function getPayments() {
+      try {
+        if (!USE_FIRESTORE) {
+          const stored = localStorage.getItem('payments_backup');
+          return stored ? JSON.parse(stored) : [];
+        }
+        const querySnapshot = await getDocs(collection(db, 'payments'));
+        const payments = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        localStorage.setItem('payments_backup', JSON.stringify(payments));
+        return payments;
+      } catch (error) {
+        console.error('Error obteniendo pagos:', error);
+        const stored = localStorage.getItem('payments_backup');
+        return stored ? JSON.parse(stored) : [];
+      }
+    }
+
+    async function getUsers() {
+      try {
+        if (!USE_FIRESTORE) {
+          const stored = localStorage.getItem('users_backup');
+          return stored ? JSON.parse(stored) : [];
+        }
+        const querySnapshot = await getDocs(collection(db, 'users'));
+        const users = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        localStorage.setItem('users_backup', JSON.stringify(users));
+        return users;
+      } catch (error) {
+        console.error('Error obteniendo usuarios:', error);
+        const stored = localStorage.getItem('users_backup');
+        return stored ? JSON.parse(stored) : [];
+      }
+    }
+
+    async function saveStudents(students) {
+      try {
+        console.log('Iniciando guardado de estudiantes...');
+        
+        // Respaldo en localStorage siempre
+        localStorage.setItem('students_backup', JSON.stringify(students));
+        console.log('Respaldo guardado en localStorage');
+        
+        if (!USE_FIRESTORE) {
+          console.log('Usando localStorage - datos guardados');
+          return;
+        }
+        
+        console.log('Guardando en Firestore...');
+        const studentsRef = collection(db, 'students');
+        const snapshot = await getDocs(studentsRef);
+        const currentIds = snapshot.docs.map(doc => doc.id);
+        const newIds = students.map(s => s.id);
+        const toDelete = currentIds.filter(id => !newIds.includes(id));
+        
+        if (toDelete.length > 0) {
+          console.log('Eliminando documentos:', toDelete);
+          const deletePromises = toDelete.map(id => deleteDoc(doc(db, 'students', id)));
+          await Promise.all(deletePromises);
+        }
+        
+        console.log('Guardando estudiantes en Firestore:', students);
+        const promises = students.map(student => {
+          const { id, ...data } = student;
+          return setDoc(doc(db, 'students', id), data);
+        });
+        await Promise.all(promises);
+        console.log('Estudiantes guardados exitosamente en Firestore');
+      } catch (error) {
+        console.error('Error guardando en Firestore:', error);
+        console.log('Los datos se han respaldado en localStorage');
+      }
+    }
+
+    async function saveInvoices(invoices) {
+      try {
+        localStorage.setItem('invoices_backup', JSON.stringify(invoices));
+        
+        if (!USE_FIRESTORE) return;
+        
+        const invoicesRef = collection(db, 'invoices');
+        const snapshot = await getDocs(invoicesRef);
+        const currentIds = snapshot.docs.map(doc => doc.id);
+        const newIds = invoices.map(s => s.id);
+        const toDelete = currentIds.filter(id => !newIds.includes(id));
+        const deletePromises = toDelete.map(id => deleteDoc(doc(db, 'invoices', id)));
+        await Promise.all(deletePromises);
+        const promises = invoices.map(invoice => {
+          const { id, ...data } = invoice;
+          return setDoc(doc(db, 'invoices', id), data);
+        });
+        await Promise.all(promises);
+      } catch (error) {
+        console.error('Error guardando facturas:', error);
+      }
+    }
+
+    async function savePayments(payments) {
+      try {
+        localStorage.setItem('payments_backup', JSON.stringify(payments));
+        
+        if (!USE_FIRESTORE) return;
+        
+        const paymentsRef = collection(db, 'payments');
+        const snapshot = await getDocs(paymentsRef);
+        const currentIds = snapshot.docs.map(doc => doc.id);
+        const newIds = payments.map(s => s.id);
+        const toDelete = currentIds.filter(id => !newIds.includes(id));
+        const deletePromises = toDelete.map(id => deleteDoc(doc(db, 'payments', id)));
+        await Promise.all(deletePromises);
+        const promises = payments.map(payment => {
+          const { id, ...data } = payment;
+          return setDoc(doc(db, 'payments', id), data);
+        });
+        await Promise.all(promises);
+      } catch (error) {
+        console.error('Error guardando pagos:', error);
+      }
+    }
+
+    async function saveUsers(users) {
+      try {
+        localStorage.setItem('users_backup', JSON.stringify(users));
+        
+        if (!USE_FIRESTORE) return;
+        
+        const usersRef = collection(db, 'users');
+        const snapshot = await getDocs(usersRef);
+        const currentIds = snapshot.docs.map(doc => doc.id);
+        const newIds = users.map(s => s.id);
+        const toDelete = currentIds.filter(id => !newIds.includes(id));
+        const deletePromises = toDelete.map(id => deleteDoc(doc(db, 'users', id)));
+        await Promise.all(deletePromises);
+        const promises = users.map(user => {
+          const { id, ...data } = user;
+          return setDoc(doc(db, 'users', id), data);
+        });
+        await Promise.all(promises);
+      } catch (error) {
+        console.error('Error guardando usuarios:', error);
+      }
+    }
+
+    async function generateInvoiceNumber() {
+      const snapshot = await getDocs(collection(db, STORAGE_KEYS.invoices));
+      return `F-${(snapshot.size + 1).toString().padStart(6, '0')}`;
+    }
+
+    async function generateNCF() {
+      const snapshot = await getDocs(collection(db, STORAGE_KEYS.invoices));
+      return `NCF-${(snapshot.size + 1).toString().padStart(8, '0')}`;
+    }
+
+    function formatCurrency(value) {
+      return new Intl.NumberFormat('es-DO', { style: 'currency', currency: 'DOP' }).format(value || 0);
+    }
+
+    function capitalize(text) {
+      return text ? text.charAt(0).toUpperCase() + text.slice(1) : '';
+    }
+
+    async function openStudentModal(studentId = null) {
+      editingStudentId = studentId;
+      const modal = document.getElementById('studentModalBackdrop');
+      if (studentId) {
+        const students = await getStudents();
+        const student = students.find(item => item.id === studentId);
+        document.getElementById('studentModalTitle').textContent = 'Editar estudiante';
+        document.getElementById('studentName').value = student.name;
+        document.getElementById('studentCourse').value = student.course;
+        document.getElementById('studentTutor').value = student.tutor;
+        document.getElementById('studentPhone').value = student.phone;
+        document.getElementById('studentStatus').value = student.status;
+      } else {
+        document.getElementById('studentModalTitle').textContent = 'Nuevo estudiante';
+        document.getElementById('studentName').value = '';
+        document.getElementById('studentCourse').value = '';
+        document.getElementById('studentTutor').value = '';
+        document.getElementById('studentPhone').value = '';
+        document.getElementById('studentStatus').value = 'activo';
+      }
+      modal.classList.remove('hidden');
+    }
+
+    function closeStudentModal() {
+      document.getElementById('studentModalBackdrop').classList.add('hidden');
+    }
+
+    async function saveStudent() {
+      try {
+        const name = document.getElementById('studentName').value.trim();
+        const course = document.getElementById('studentCourse').value.trim();
+        const tutor = document.getElementById('studentTutor').value.trim();
+        const phone = document.getElementById('studentPhone').value.trim();
+        const status = document.getElementById('studentStatus').value;
+        if (!name || !course || !tutor || !phone) {
+          showNotification('Complete todos los campos del estudiante.', 'warning');
+          return;
+        }
+        
+        console.log('Obteniendo estudiantes...');
+        const students = await getStudents();
+        console.log('Estudiantes obtenidos:', students);
+        
+        if (editingStudentId) {
+          const student = students.find(item => item.id === editingStudentId);
+          Object.assign(student, { name, course, tutor, phone, status });
+        } else {
+          students.push({ id: crypto.randomUUID(), name, course, tutor, phone, status });
+        }
+        
+        console.log('Guardando estudiantes:', students);
+        await saveStudents(students);
+        console.log('Estudiantes guardados exitosamente');
+        
+        closeStudentModal();
+        await renderStudentTable();
+        await renderMetrics();
+        showNotification('Estudiante guardado correctamente', 'success');
+      } catch (error) {
+        console.error('Error al guardar estudiante:', error);
+        showNotification('Error al guardar: ' + error.message, 'error');
+      }
+    }
+
+    async function deleteStudent(studentId) {
+      if (!confirm('Eliminar estudiante y todas sus facturas/pagos asociados?')) return;
+      const students = (await getStudents()).filter(item => item.id !== studentId);
+      const removedInvoiceIds = (await getInvoices()).filter(item => item.studentId === studentId).map(item => item.id);
+      const invoices = (await getInvoices()).filter(item => item.studentId !== studentId);
+      const payments = (await getPayments()).filter(payment => !removedInvoiceIds.includes(payment.invoiceId));
+      await saveStudents(students);
+      await saveInvoices(invoices);
+      await savePayments(payments);
+      await renderStudentTable(); await renderInvoiceTable(); await renderPaymentTable(); await renderMetrics(); await renderReports();
+    }
+
+    async function renderStudentTable() {
+      try {
+        console.log('Renderizando tabla de estudiantes...');
+        const body = document.getElementById('studentsTableBody');
+        if (!body) {
+          console.error('No se encontró el elemento studentsTableBody');
+          return;
+        }
+        
+        const search = document.getElementById('studentSearch')?.value.toLowerCase() || '';
+        const filter = document.getElementById('studentFilter')?.value || 'all';
+        
+        console.log('Obteniendo estudiantes...');
+        const allStudents = await getStudents();
+        console.log('Estudiantes obtenidos:', allStudents);
+        
+        const students = allStudents.filter(student => {
+          const matchesSearch = student.name.toLowerCase().includes(search) || student.course.toLowerCase().includes(search);
+          const matchesFilter = filter === 'all' || student.status === filter;
+          return matchesSearch && matchesFilter;
+        });
+        
+        console.log('Estudiantes filtrados:', students);
+        
+        const rows = students.map(student => `
+          <tr>
+            <td>${student.name}</td>
+            <td>${student.course}</td>
+            <td>${student.tutor}</td>
+            <td>${student.phone}</td>
+            <td><span class="badge ${student.status}">${capitalize(student.status)}</span></td>
+            <td>
+              <button class="btn btn-secondary" onclick="openStudentModal('${student.id}')">Editar</button>
+              <button class="btn btn-danger" onclick="deleteStudent('${student.id}')">Eliminar</button>
+            </td>
+          </tr>
+        `).join('');
+        
+        body.innerHTML = rows || '<tr><td colspan="6" style="color:var(--text-muted);">No se encontraron estudiantes.</td></tr>';
+        console.log('Tabla de estudiantes renderizada');
+      } catch (error) {
+        console.error('Error al renderizar tabla de estudiantes:', error);
+        const body = document.getElementById('studentsTableBody');
+        if (body) {
+          body.innerHTML = '<tr><td colspan="6" style="color:red;">Error al cargar estudiantes: ' + error.message + '</td></tr>';
+        }
+      }
+    }
+
+    async function openInvoiceModal(invoiceId = null) {
+      editingInvoiceId = invoiceId;
+      const modal = document.getElementById('invoiceModalBackdrop');
+      const students = (await getStudents()).filter(student => student.status === 'activo');
+      if (!students.length) {
+        showNotification('No hay estudiantes activos para asignar a una factura.', 'warning');
+        return;
+      }
+      const invoiceStudent = document.getElementById('invoiceStudent');
+      invoiceStudent.innerHTML = students.map(student => `<option value="${student.id}">${student.name} — ${student.course}</option>`).join('');
+      document.getElementById('invoiceDate').value = new Date().toISOString().split('T')[0];
+      document.getElementById('invoiceNCF').value = await generateNCF();
+      document.getElementById('invoiceAmount').value = '';
+      if (invoiceId) {
+        const invoices = await getInvoices();
+        const invoice = invoices.find(item => item.id === invoiceId);
+        document.getElementById('invoiceModalTitle').textContent = 'Editar factura';
+        document.getElementById('invoiceStudent').value = invoice.studentId;
+        document.getElementById('invoiceDate').value = invoice.date;
+        document.getElementById('invoiceConcept').value = invoice.concept;
+        document.getElementById('invoiceAmount').value = invoice.amount;
+        document.getElementById('invoiceNCF').value = invoice.ncf;
+      } else {
+        document.getElementById('invoiceModalTitle').textContent = 'Nueva factura';
+      }
+      modal.classList.remove('hidden');
+    }
+
+    function closeInvoiceModal() {
+      document.getElementById('invoiceModalBackdrop').classList.add('hidden');
+    }
+
+    async function saveInvoice() {
+      try {
+        const studentId = document.getElementById('invoiceStudent').value;
+        const date = document.getElementById('invoiceDate').value;
+        const concept = document.getElementById('invoiceConcept').value;
+        const amount = Number(document.getElementById('invoiceAmount').value);
+        const ncf = document.getElementById('invoiceNCF').value;
+        if (!studentId || !date || !concept || !amount || amount <= 0) {
+          showNotification('Complete todos los datos de la factura.', 'warning');
+          return;
+        }
+        const invoices = await getInvoices();
+        if (editingInvoiceId) {
+          const invoice = invoices.find(item => item.id === editingInvoiceId);
+          Object.assign(invoice, { studentId, date, concept, amount, ncf });
+        } else {
+          invoices.push({
+            id: crypto.randomUUID(),
+            invoiceNumber: await generateInvoiceNumber(),
+            ncf,
+            studentId,
+            date,
+            concept,
+            amount,
+            paid: 0,
+            status: 'pendiente',
+          });
+        }
+        await saveInvoices(invoices);
+        closeInvoiceModal();
+        renderInvoiceTable();
+        renderMetrics();
+        renderReports();
+        showNotification('Factura guardada correctamente', 'success');
+      } catch (error) {
+        console.error('Error al guardar factura:', error);
+        showNotification('Error al guardar factura: ' + error.message, 'error');
+      }
+    }
+
+    async function deleteInvoice(invoiceId) {
+      if (!confirm('Eliminar factura y pagos asociados?')) return;
+      const invoices = (await getInvoices()).filter(item => item.id !== invoiceId);
+      const payments = (await getPayments()).filter(payment => payment.invoiceId !== invoiceId);
+      await saveInvoices(invoices);
+      await savePayments(payments);
+      await renderInvoiceTable(); await renderPaymentTable(); await renderMetrics(); await renderReports();
+    }
+
+    async function renderInvoiceTable() {
+      const body = document.getElementById('invoicesTableBody');
+      const query = document.getElementById('invoiceSearch').value.toLowerCase();
+      const students = await getStudents();
+      const invoices = (await getInvoices()).map(inv => {
+        const student = students.find(std => std.id === inv.studentId) || { name: 'No definido', course: '' };
+        const balance = inv.amount - inv.paid;
+        const status = balance <= 0 ? 'paid' : (new Date(inv.date) < new Date() ? 'overdue' : 'pending');
+        return { ...inv, studentName: student.name, balance, status };
+      }).filter(inv => {
+        return inv.studentName.toLowerCase().includes(query) || inv.concept.toLowerCase().includes(query) || inv.ncf.toLowerCase().includes(query) || inv.invoiceNumber.toLowerCase().includes(query);
+      });
+      body.innerHTML = invoices.map(inv => `
+        <tr>
+          <td>${inv.invoiceNumber}</td>
+          <td>${inv.ncf}</td>
+          <td>${inv.studentName}</td>
+          <td>${inv.date}</td>
+          <td>${inv.concept}</td>
+          <td>${formatCurrency(inv.amount)}</td>
+          <td><span class="badge ${inv.status}">${formatCurrency(inv.balance)}</span></td>
+          <td style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn btn-secondary" onclick="openInvoiceModal('${inv.id}')">Editar</button>
+            <button class="btn btn-success" onclick="exportInvoicePDF('${inv.id}')">PDF</button>
+            <button class="btn btn-danger" onclick="deleteInvoice('${inv.id}')">Eliminar</button>
+          </td>
+        </tr>
+      `).join('') || '<tr><td colspan="8" style="color:var(--text-muted);">No hay facturas para mostrar.</td></tr>';
+    }
+
+    async function openPaymentModal() {
+      const invoices = (await getInvoices()).filter(item => item.amount - item.paid > 0);
+      if (!invoices.length) {
+        showNotification('No hay facturas pendientes para pagar.', 'warning');
+        return;
+      }
+      const select = document.getElementById('paymentInvoice');
+      select.innerHTML = invoices.map(inv => `<option value="${inv.id}">${inv.invoiceNumber} — ${inv.concept} — ${formatCurrency(inv.amount - inv.paid)}</option>`).join('');
+      document.getElementById('paymentAmount').value = invoices[0]?.amount - invoices[0]?.paid || 0;
+      document.getElementById('paymentDate').value = new Date().toISOString().split('T')[0];
+      document.getElementById('paymentModalBackdrop').classList.remove('hidden');
+    }
+
+    function closePaymentModal() {
+      document.getElementById('paymentModalBackdrop').classList.add('hidden');
+    }
+
+    async function savePayment() {
+      try {
+        const invoiceId = document.getElementById('paymentInvoice').value;
+        const amount = Number(document.getElementById('paymentAmount').value);
+        const method = document.getElementById('paymentMethod').value;
+        const date = document.getElementById('paymentDate').value;
+        if (!invoiceId || !amount || amount <= 0) {
+          showNotification('Complete los datos del pago.', 'warning');
+          return;
+        }
+        const invoices = await getInvoices();
+        const invoice = invoices.find(inv => inv.id === invoiceId);
+        const remaining = invoice.amount - invoice.paid;
+        if (amount > remaining) {
+          showNotification('El pago excede el saldo pendiente.', 'warning');
+          return;
+        }
+        invoice.paid += amount;
+        invoice.status = invoice.paid >= invoice.amount ? 'paid' : 'pending';
+        await saveInvoices(invoices);
+        const payments = await getPayments();
+        payments.push({
+          id: crypto.randomUUID(),
+          invoiceId,
+          amount,
+          method,
+          date,
+        });
+        await savePayments(payments);
+        closePaymentModal();
+        await renderPaymentTable(); await renderInvoiceTable(); await renderMetrics(); await renderReports();
+        showNotification('Pago registrado correctamente', 'success');
+      } catch (error) {
+        console.error('Error al guardar pago:', error);
+        showNotification('Error al guardar pago: ' + error.message, 'error');
+      }
+    }
+
+    async function renderPaymentTable() {
+      const payments = await getPayments();
+      const students = await getStudents();
+      const invoices = await getInvoices();
+      const body = document.getElementById('paymentsTableBody');
+      body.innerHTML = payments.map(payment => {
+        const invoice = invoices.find(inv => inv.id === payment.invoiceId) || {};
+        const student = students.find(std => std.id === invoice.studentId) || {};
+        return `
+          <tr>
+            <td>${invoice.invoiceNumber || 'N/D'}</td>
+            <td>${student.name || 'Estudiante eliminado'}</td>
+            <td>${payment.date}</td>
+            <td>${payment.method}</td>
+            <td>${formatCurrency(payment.amount)}</td>
+          </tr>
+        `;
+      }).join('') || '<tr><td colspan="5" style="color:var(--text-muted);">No hay pagos registrados.</td></tr>';
+    }
+
+    async function renderMetrics() {
+      const students = await getStudents();
+      const invoices = await getInvoices();
+      const payments = await getPayments();
+      const totalStudents = students.length;
+      const totalInvoices = invoices.length;
+      const income = payments.reduce((sum, payment) => sum + payment.amount, 0);
+      const pending = invoices.reduce((sum, invoice) => sum + Math.max(0, invoice.amount - invoice.paid), 0);
+      document.getElementById('metricStudents').textContent = totalStudents;
+      document.getElementById('metricInvoices').textContent = totalInvoices;
+      document.getElementById('metricIncome').textContent = formatCurrency(income);
+      document.getElementById('metricPending').textContent = formatCurrency(pending);
+    }
+
+    async function renderReports() {
+      const invoices = await getInvoices();
+      const payments = await getPayments();
+      const students = await getStudents();
+      const start = document.getElementById('reportStart').value;
+      const end = document.getElementById('reportEnd').value;
+      const paymentsFiltered = payments.filter(payment => {
+        if (!start && !end) return true;
+        const date = payment.date;
+        if (start && date < start) return false;
+        if (end && date > end) return false;
+        return true;
+      });
+      const income = paymentsFiltered.reduce((sum, payment) => sum + payment.amount, 0);
+      const overdueStudents = invoices.filter(inv => inv.amount - inv.paid > 0 && new Date(inv.date) < new Date()).map(inv => inv.studentId);
+      const overdueCount = new Set(overdueStudents).size;
+      const invoicesCount = invoices.length;
+      const overdueList = students.map(student => {
+        const studentInvoices = invoices.filter(inv => inv.studentId === student.id);
+        const totalDue = studentInvoices.reduce((sum, inv) => sum + Math.max(0, inv.amount - inv.paid), 0);
+        if (totalDue <= 0) return null;
+        const latestInvoice = studentInvoices.sort((a,b) => new Date(b.date) - new Date(a.date))[0];
+        return { ...student, balance: totalDue, latestInvoice: latestInvoice?.invoiceNumber };
+      }).filter(Boolean);
+      document.getElementById('reportIncome').textContent = formatCurrency(income);
+      document.getElementById('reportOverdue').textContent = `${overdueCount} estudiantes`;
+      document.getElementById('reportInvoices').textContent = invoicesCount;
+      const rows = overdueList.map(student => `
+        <tr>
+          <td>${student.name}</td>
+          <td>${student.course}</td>
+          <td>${formatCurrency(student.balance)}</td>
+          <td>${student.latestInvoice || 'N/A'}</td>
+        </tr>
+      `).join('');
+      document.getElementById('reportStudentsBody').innerHTML = rows || '<tr><td colspan="4" style="color:var(--text-muted);">No hay saldos pendientes.</td></tr>';
+    }
+
+    async function renderUsersTable() {
+      const users = await getUsers();
+      const body = document.getElementById('usersTableBody');
+      body.innerHTML = users.map(user => `
+        <tr>
+          <td>${user.username}</td>
+          <td>${capitalize(user.role)}</td>
+          <td><span class="badge ${user.status}">${capitalize(user.status)}</span></td>
+          <td style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn btn-secondary" onclick="editUser('${user.id}')">Editar</button>
+            <button class="btn btn-danger" onclick="deleteUser('${user.id}')">Eliminar</button>
+          </td>
+        </tr>
+      `).join('') || '<tr><td colspan="4" style="color:var(--text-muted);">No hay usuarios registrados.</td></tr>';
+    }
+
+    async function openUserModal(userId = null) {
+      editingUserId = userId;
+      if (userId) {
+        const users = await getUsers();
+        const user = users.find(item => item.id === userId);
+        document.getElementById('userName').value = user.username;
+        document.getElementById('userRole').value = user.role;
+        document.getElementById('userStatus').value = user.status;
+      } else {
+        document.getElementById('userName').value = '';
+        document.getElementById('userRole').value = 'administrador';
+        document.getElementById('userStatus').value = 'activo';
+      }
+      document.getElementById('userModalBackdrop').classList.remove('hidden');
+    }
+
+    function closeUserModal() {
+      document.getElementById('userModalBackdrop').classList.add('hidden');
+    }
+
+    async function saveUser() {
+      try {
+        const username = document.getElementById('userName').value.trim();
+        const role = document.getElementById('userRole').value;
+        const status = document.getElementById('userStatus').value;
+        if (!username) {
+          showNotification('Ingrese un nombre de usuario.', 'warning');
+          return;
+        }
+        const users = await getUsers();
+        if (editingUserId) {
+          const user = users.find(item => item.id === editingUserId);
+          Object.assign(user, { username, role, status });
+        } else {
+          users.push({ id: crypto.randomUUID(), username, role, status });
+        }
+        await saveUsers(users);
+        closeUserModal();
+        await renderUsersTable();
+        showNotification('Usuario guardado correctamente', 'success');
+      } catch (error) {
+        console.error('Error al guardar usuario:', error);
+        showNotification('Error al guardar usuario: ' + error.message, 'error');
+      }
+    }
+
+    function editUser(userId) {
+      openUserModal(userId);
+    }
+
+    async function deleteUser(userId) {
+      if (!confirm('Eliminar usuario?')) return;
+      const users = (await getUsers()).filter(item => item.id !== userId);
+      await saveUsers(users);
+      await renderUsersTable();
+    }
+
+    async function generateMonthlyBilling() {
+      const confirmMessage = 'Generar facturación mensual automática para todos los estudiantes activos?';
+      if (!confirm(confirmMessage)) return;
+      const students = getStudents().filter(student => student.status === 'activo');
+      const invoices = getInvoices();
+      const today = new Date();
+      const currentMonth = today.toLocaleString('es-DO', { month: 'long', year: 'numeric' });
+      students.forEach(student => {
+        const monthlyAmount = 4500; // Valor base de ejemplo
+        invoices.push({
+          id: crypto.randomUUID(),
+          invoiceNumber: generateInvoiceNumber(),
+          ncf: generateNCF(),
+          studentId: student.id,
+          date: today.toISOString().split('T')[0],
+          concept: `Mensualidad ${currentMonth}`,
+          amount: monthlyAmount,
+          paid: 0,
+          status: 'pendiente',
+        });
+      });
+      saveInvoices(invoices);
+      renderInvoiceTable(); renderMetrics(); renderReports();
+      showNotification('Facturación mensual generada correctamente', 'success');
+    }
+
+    function exportInvoicePDF(invoiceId) {
+      const invoice = getInvoices().find(inv => inv.id === invoiceId);
+      if (!invoice) return;
+      const student = getStudents().find(std => std.id === invoice.studentId) || {};
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+      doc.setFontSize(18);
+      doc.text('Factura Educativa', 40, 50);
+      doc.setFontSize(12);
+      doc.text(`Factura: ${invoice.invoiceNumber}`, 40, 85);
+      doc.text(`NCF: ${invoice.ncf}`, 40, 105);
+      doc.text(`Fecha: ${invoice.date}`, 40, 125);
+      doc.text(`Estudiante: ${student.name || 'No definido'}`, 40, 145);
+      doc.text(`Curso: ${student.course || 'N/D'}`, 40, 165);
+      doc.text(`Concepto: ${invoice.concept}`, 40, 185);
+      doc.text(`Monto total: ${formatCurrency(invoice.amount)}`, 40, 205);
+      const balance = invoice.amount - invoice.paid;
+      doc.text(`Saldo pendiente: ${formatCurrency(balance)}`, 40, 225);
+      doc.text('Gracias por confiar en el sistema ERP educativo.', 40, 265);
+      doc.save(`${invoice.invoiceNumber}.pdf`);
+    }
+
+    async function printInvoiceReport() {
+      const invoices = getInvoices();
+      if (!invoices.length) {
+        showNotification('No hay facturas para generar reporte.', 'warning');
+        return;
+      }
+      const total = invoices.reduce((sum, inv) => sum + inv.amount, 0);
+      showNotification(`Reporte: ${invoices.length} facturas | Total: ${formatCurrency(total)}`, 'success');
+    }
+
+    async function downloadBackup() {
+      const backup = {
+        students: getStudents(),
+        invoices: getInvoices(),
+        payments: getPayments(),
+        users: getUsers(),
+        generatedAt: new Date().toISOString(),
+      };
+      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'edu-erp-backup.json';
+      link.click();
+    }
+
+    // Expose functions to window for onclick handlers
+    window.login = login;
+    window.logout = logout;
+    window.switchSection = switchSection;
+    window.openStudentModal = openStudentModal;
+    window.closeStudentModal = closeStudentModal;
+    window.saveStudent = saveStudent;
+    window.deleteStudent = deleteStudent;
+    window.openInvoiceModal = openInvoiceModal;
+    window.closeInvoiceModal = closeInvoiceModal;
+    window.saveInvoice = saveInvoice;
+    window.openPaymentModal = openPaymentModal;
+    window.closePaymentModal = closePaymentModal;
+    window.savePayment = savePayment;
+    window.renderReports = renderReports;
+    window.openUserModal = openUserModal;
+    window.closeUserModal = closeUserModal;
+    window.saveUser = saveUser;
+    window.deleteUser = deleteUser;
+    window.toggleSidebar = toggleSidebar;
+    window.downloadBackup = downloadBackup;
+    window.generateMonthlyBilling = generateMonthlyBilling;
+    window.printInvoiceReport = printInvoiceReport;
+    window.exportInvoicePDF = exportInvoicePDF;
+    window.deleteInvoice = deleteInvoice;
+  </script>
+</body>
+</html>
