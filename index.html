@@ -351,47 +351,6 @@
       margin: 0 0 24px;
     }
     
-    .auth-tab {
-      display: none;
-    }
-    .auth-tab.active {
-      display: block;
-      animation: fadeIn 0.3s ease-out;
-    }
-    
-    .form-input {
-      width: 100%;
-      padding: 12px 16px;
-      margin-bottom: 12px;
-      background: rgba(51,65,85,0.5);
-      border: 1px solid rgba(148,163,184,0.2);
-      border-radius: 8px;
-      color: white;
-      font-size: 1rem;
-      transition: all 0.2s ease;
-      box-sizing: border-box;
-    }
-    .form-input:focus {
-      outline: none;
-      background: rgba(51,65,85,0.8);
-      border-color: var(--color-primary);
-      box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
-    }
-    .form-input::placeholder {
-      color: var(--text-muted);
-    }
-    
-    @keyframes fadeIn {
-      from {
-        opacity: 0;
-        transform: translateY(-10px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-    
     .login-options {
       display: grid;
       gap: 16px;
@@ -518,32 +477,14 @@
 <body>
   <div class="login-screen" id="loginScreen">
     <div class="login-card">
-      <!-- LOGIN TAB -->
-      <div id="loginTab" class="auth-tab active">
-        <h2>ERP Educativo Pro</h2>
-        <p>Inicia sesión con tu cuenta</p>
-        <input type="email" id="loginEmail" placeholder="email@instituccion.com" class="form-input">
-        <input type="password" id="loginPassword" placeholder="Contraseña" class="form-input">
-        <button class="btn btn-primary" onclick="handleLogin()" style="width: 100%; margin-top: 16px;">Iniciar Sesión</button>
-        <button class="btn btn-secondary" onclick="switchAuthTab('signup')" style="width: 100%; margin-top: 8px;">Crear Cuenta →</button>
-        <button class="btn btn-outline" onclick="handlePasswordReset()" style="width: 100%; margin-top: 8px;">¿Olvidaste tu contraseña?</button>
-        <div id="loginError" style="color: #ef4444; font-size: 0.9rem; margin-top: 16px; text-align: center; display: none;"></div>
+      <h2>ERP Educativo Pro</h2>
+      <p>Selecciona tu rol para continuar</p>
+      <div class="login-options">
+        <button class="btn btn-primary" onclick="login('administrador')" style="width: 100%;">👑 Administrador</button>
+        <button class="btn btn-primary" onclick="login('caja')" style="width: 100%; margin-top: 12px;">💰 Caja</button>
+        <button class="btn btn-primary" onclick="login('contabilidad')" style="width: 100%; margin-top: 12px;">📊 Contabilidad</button>
       </div>
-
-      <!-- SIGNUP TAB -->
-      <div id="signupTab" class="auth-tab" style="display: none;">
-        <h2>Crear Nueva Cuenta</h2>
-        <p>Registro para institución educativa</p>
-        <input type="text" id="signupInstitution" placeholder="Nombre de Institución" class="form-input">
-        <input type="email" id="signupEmail" placeholder="email@instituccion.com" class="form-input">
-        <input type="password" id="signupPassword" placeholder="Contraseña (mín. 6 caracteres)" class="form-input">
-        <input type="password" id="signupPasswordConfirm" placeholder="Confirmar contraseña" class="form-input">
-        <button class="btn btn-primary" onclick="handleSignup()" style="width: 100%; margin-top: 16px;">Crear Cuenta</button>
-        <button class="btn btn-secondary" onclick="switchAuthTab('login')" style="width: 100%; margin-top: 8px;">← Volver al Login</button>
-        <div id="signupError" style="color: #ef4444; font-size: 0.9rem; margin-top: 16px; text-align: center; display: none;"></div>
-      </div>
-
-      <div class="footer-note">🔒 Tus datos están protegidos con Firebase. Certificado SSL y encriptación de extremo a extremo.</div>
+      <div class="footer-note">Sistema de gestión educativa con respaldo automático en la nube.</div>
     </div>
   </div>
   <div class="app hidden" id="app">
@@ -586,11 +527,10 @@
         </div>
         <div class="user-panel">
           <div>
-            <div style="font-size:0.75rem; color:var(--text-muted);">Usuario</div>
+            <div style="font-size:0.75rem; color:var(--text-muted);">Rol</div>
             <strong id="userRoleLabel">Administrador</strong>
-            <div style="font-size:0.75rem; color:var(--text-muted); margin-top: 4px;" id="userEmailDisplay">email@institucion.com</div>
           </div>
-          <button class="btn btn-secondary" onclick="logout()">Cerrar sesión</button>
+          <button class="btn btn-secondary" onclick="logout()">Cambiar rol</button>
         </div>
       </div>
       <div class="content">
@@ -940,9 +880,8 @@
   </div>
 
   <script type="module">
-    import { db, auth } from './firebase.js';
+    import { db } from './firebase.js';
     import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, setDoc, query, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-    import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
     console.log('db disponible:', typeof db !== 'undefined' ? 'SÍ' : 'NO');
     
@@ -958,9 +897,7 @@
       users: 'users',
     };
     
-    let currentUser = null;  // Usuario autenticado actualmente
-    let currentRole = null;  // Rol del usuario (admin, caja, contabilidad)
-    let institutionId = null; // ID de la institución (para multi-tenancy)
+    let currentRole = 'administrador';  // Rol del usuario (admin, caja, contabilidad)
     let selectedStudentId = null;
     let editingStudentId = null;
     let editingInvoiceId = null;
@@ -976,96 +913,30 @@
       setTimeout(() => notification.remove(), 3000);
     }
 
-    // Monitorear cambios de autenticación
-    onAuthStateChanged(auth, async (user) => {
-      console.log('Auth state changed:', user ? 'Logged in' : 'Logged out');
-      if (user) {
-        currentUser = user;
-        institutionId = user.uid; // El uid es el ID de la institución
-        console.log('Usuario autenticado:', user.email);
-        
-        try {
-          // Obtener datos de la institución
-          const instDoc = await getDocs(collection(db, 'institutions'));
-          const institutionData = instDoc.docs.find(d => d.data().owner === user.uid);
-          
-          if (institutionData) {
-            console.log('Institución encontrada:', institutionData.data().name);
-          }
-
-          // Obtener el rol del usuario desde Firestore
-          const userRef = doc(db, `institutions/${institutionId}/users`, user.uid);
-          const userSnap = await getDocs(collection(db, `institutions/${institutionId}/users`));
-          const userData = userSnap.docs.find(d => d.data().uid === user.uid);
-          
-          if (userData) {
-            currentRole = userData.data().role;
-            console.log('Rol del usuario:', currentRole);
-          } else {
-            // Si no existe, crear uno como admin
-            await setDoc(doc(db, `institutions/${institutionId}/users`, user.uid), {
-              id: user.uid,
-              uid: user.uid,
-              email: user.email,
-              role: 'administrador',
-              status: 'activo',
-              createdAt: new Date().toISOString(),
-            });
-            currentRole = 'administrador';
-          }
-
-          // Mostrar la App
-          document.getElementById('loginScreen').classList.add('hidden');
-          document.getElementById('app').classList.remove('hidden');
-          document.getElementById('userRoleLabel').textContent = capitalize(currentRole);
-          document.getElementById('userEmailDisplay').textContent = user.email;
-
-          // Inicializar datos
-          await initializeStorage();
-          renderAdminSections();
-          await refreshAll();
-          console.log('Aplicación iniciada correctamente');
-        } catch (error) {
-          console.error('Error al cargar datos:', error);
-          showNotification('Error al cargar datos: ' + error.message, 'error');
-        }
-      } else {
-        // Usuario no autenticado - mostrar login
-        currentUser = null;
-        currentRole = null;
-        institutionId = null;
-        document.getElementById('loginScreen').classList.remove('hidden');
-        document.getElementById('app').classList.add('hidden');
-      }
-    });
-
     window.addEventListener('DOMContentLoaded', async () => {
       try {
         console.log('DOM Content Loaded');
-        // Solo inicializamos las estructuras, el auth state change hace el resto
+        // Mostrar la app directamente
+        document.getElementById('loginScreen').classList.add('hidden');
+        document.getElementById('app').classList.remove('hidden');
+        document.getElementById('userRoleLabel').textContent = capitalize(currentRole);
+        
+        // Inicializar datos
+        await initializeStorage();
+        renderAdminSections();
+        await refreshAll();
+        console.log('Aplicación iniciada correctamente');
       } catch (error) {
         console.error('Error al iniciar:', error);
       }
     });
 
-    // ===== HELPERS PARA MULTI-TENANCY =====
-    
-    function getCollectionRef(collectionName) {
-      // Devuelve la referencia a una colección dentro de la institución actual
-      return collection(db, `institutions/${institutionId}/${collectionName}`);
-    }
-
-    function getDocRef(collectionName, docId) {
-      // Devuelve la referencia a un documento dentro de la institución actual
-      return doc(db, `institutions/${institutionId}/${collectionName}`, docId);
-    }
-
     async function initializeStorage() {
       try {
-        console.log('Inicializando almacenamiento para institución:', institutionId);
+        console.log('Inicializando almacenamiento...');
         
         // Check if students collection is empty, add defaults
-        const studentsRef = getCollectionRef('students');
+        const studentsRef = collection(db, 'students');
         const studentsSnapshot = await getDocs(studentsRef);
         console.log('Estudiantes encontrados:', studentsSnapshot.size);
         
@@ -1095,129 +966,8 @@
       }
     }
 
-    // ===== AUTENTICACIÓN CON FIREBASE =====
-    
-    function switchAuthTab(tab) {
-      document.getElementById('loginTab').classList.remove('active');
-      document.getElementById('signupTab').classList.remove('active');
-      document.getElementById(tab + 'Tab').classList.add('active');
-      document.getElementById('loginError').style.display = 'none';
-      document.getElementById('signupError').style.display = 'none';
-    }
-
-    async function handleLogin() {
-      const email = document.getElementById('loginEmail').value.trim();
-      const password = document.getElementById('loginPassword').value.trim();
-      const errorDiv = document.getElementById('loginError');
-
-      if (!email || !password) {
-        errorDiv.textContent = '⚠️ Por favor ingresa email y contraseña';
-        errorDiv.style.display = 'block';
-        return;
-      }
-
-      try {
-        console.log('Intentando login con:', email);
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        console.log('Login exitoso:', userCredential.user.uid);
-        showNotification('¡Bienvenido! Autenticación exitosa', 'success');
-        // El onAuthStateChanged se encargará de el resto
-      } catch (error) {
-        console.error('Error de login:', error.code, error.message);
-        let mensajeError = 'Email o contraseña incorrectos';
-        if (error.code === 'auth/user-not-found') mensajeError = 'Usuario no encontrado';
-        if (error.code === 'auth/wrong-password') mensajeError = 'Contraseña incorrecta';
-        if (error.code === 'auth/invalid-email') mensajeError = 'Email inválido';
-        errorDiv.textContent = '❌ ' + mensajeError;
-        errorDiv.style.display = 'block';
-      }
-    }
-
-    async function handleSignup() {
-      const institution = document.getElementById('signupInstitution').value.trim();
-      const email = document.getElementById('signupEmail').value.trim();
-      const password = document.getElementById('signupPassword').value.trim();
-      const passwordConfirm = document.getElementById('signupPasswordConfirm').value.trim();
-      const errorDiv = document.getElementById('signupError');
-
-      if (!institution || !email || !password || !passwordConfirm) {
-        errorDiv.textContent = '⚠️ Por favor completa todos los campos';
-        errorDiv.style.display = 'block';
-        return;
-      }
-
-      if (password !== passwordConfirm) {
-        errorDiv.textContent = '⚠️ Las contraseñas no coinciden';
-        errorDiv.style.display = 'block';
-        return;
-      }
-
-      if (password.length < 6) {
-        errorDiv.textContent = '⚠️ La contraseña debe tener al menos 6 caracteres';
-        errorDiv.style.display = 'block';
-        return;
-      }
-
-      try {
-        console.log('Creando cuenta:', email);
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const userId = userCredential.user.uid;
-
-        // Crear documento en Firestore con datos de la institución
-        await setDoc(doc(db, 'institutions', userId), {
-          id: userId,
-          name: institution,
-          email: email,
-          owner: userId,
-          createdAt: new Date().toISOString(),
-          plan: 'free', // Plan inicial
-          maxStudents: 50,
-          maxUsers: 5,
-        });
-
-        // Crear usuario admin de la institución
-        await setDoc(doc(db, `institutions/${userId}/users`, userId), {
-          id: userId,
-          uid: userId,
-          email: email,
-          role: 'administrador', // El creador es admin
-          status: 'activo',
-          createdAt: new Date().toISOString(),
-        });
-
-        console.log('Institución y usuario creados exitosamente');
-        showNotification('✅ Cuenta creada exitosamente. Iniciando sesión...', 'success');
-        // El onAuthStateChanged se encargará del resto
-      } catch (error) {
-        console.error('Error de signup:', error.code, error.message);
-        let mensajeError = 'Error al crear la cuenta';
-        if (error.code === 'auth/email-already-in-use') mensajeError = 'Este email ya está registrado';
-        if (error.code === 'auth/weak-password') mensajeError = 'Contraseña muy débil';
-        if (error.code === 'auth/invalid-email') mensajeError = 'Email inválido';
-        errorDiv.textContent = '❌ ' + mensajeError;
-        errorDiv.style.display = 'block';
-      }
-    }
-
-    async function handlePasswordReset() {
-      const email = document.getElementById('loginEmail').value.trim();
-      if (!email) {
-        showNotification('Por favor ingresa tu email para recuperar la contraseña', 'warning');
-        return;
-      }
-
-      try {
-        await sendPasswordResetEmail(auth, email);
-        showNotification('✅ Email de recuperación enviado. Ver tu bandeja de entrada.', 'success');
-      } catch (error) {
-        console.error('Error reset password:', error);
-        showNotification('❌ Error al enviar email de recuperación', 'error');
-      }
-    }
-
-    function login() {
-      // Función legacy - no se usa más, mantener para compatibilidad
-      currentRole = 'administrador';
+    function login(role) {
+      currentRole = role;
       sessionStorage.setItem('eduERP_role', currentRole);
       document.getElementById('loginScreen').classList.add('hidden');
       document.getElementById('app').classList.remove('hidden');
@@ -1226,28 +976,11 @@
       refreshAll();
     }
 
-    async function logout() {
-      try {
-        await signOut(auth);
-        currentUser = null;
-        currentRole = null;
-        institutionId = null;
-        sessionStorage.removeItem('eduERP_role');
-        document.getElementById('loginScreen').classList.remove('hidden');
-        document.getElementById('app').classList.add('hidden');
-        // Limpiar campos del login
-        document.getElementById('loginEmail').value = '';
-        document.getElementById('loginPassword').value = '';
-        showNotification('Sesión cerrada correctamente', 'success');
-      } catch (error) {
-        console.error('Error logout:', error);
-        showNotification('Error al cerrar sesión', 'error');
-      }
-    }
-
-    function loadAppState() {
-      // Ahora se usa onAuthStateChanged en lugar de sessionStorage
-      // Ver abajo en el DOMContentLoaded
+    function logout() {
+      currentRole = null;
+      sessionStorage.removeItem('eduERP_role');
+      document.getElementById('loginScreen').classList.remove('hidden');
+      document.getElementById('app').classList.add('hidden');
     }
 
     function renderAdminSections() {
@@ -1312,14 +1045,14 @@
 
     async function getStudents() {
       try {
-        if (!USE_FIRESTORE || !institutionId) {
+        if (!USE_FIRESTORE) {
           console.log('Usando localStorage para getStudents');
           const stored = localStorage.getItem('students_backup');
           return stored ? JSON.parse(stored) : [];
         }
         
-        console.log('Obteniendo estudiantes de institución:', institutionId);
-        const querySnapshot = await getDocs(getCollectionRef('students'));
+        console.log('Obteniendo estudiantes...');
+        const querySnapshot = await getDocs(collection(db, 'students'));
         const students = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         console.log('Estudiantes obtenidos:', students.length);
         
@@ -1336,11 +1069,11 @@
 
     async function getInvoices() {
       try {
-        if (!USE_FIRESTORE || !institutionId) {
+        if (!USE_FIRESTORE) {
           const stored = localStorage.getItem('invoices_backup');
           return stored ? JSON.parse(stored) : [];
         }
-        const querySnapshot = await getDocs(getCollectionRef('invoices'));
+        const querySnapshot = await getDocs(collection(db, 'invoices'));
         const invoices = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         localStorage.setItem('invoices_backup', JSON.stringify(invoices));
         return invoices;
@@ -1353,11 +1086,11 @@
 
     async function getPayments() {
       try {
-        if (!USE_FIRESTORE || !institutionId) {
+        if (!USE_FIRESTORE) {
           const stored = localStorage.getItem('payments_backup');
           return stored ? JSON.parse(stored) : [];
         }
-        const querySnapshot = await getDocs(getCollectionRef('payments'));
+        const querySnapshot = await getDocs(collection(db, 'payments'));
         const payments = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         localStorage.setItem('payments_backup', JSON.stringify(payments));
         return payments;
@@ -1370,11 +1103,11 @@
 
     async function getUsers() {
       try {
-        if (!USE_FIRESTORE || !institutionId) {
+        if (!USE_FIRESTORE) {
           const stored = localStorage.getItem('users_backup');
           return stored ? JSON.parse(stored) : [];
         }
-        const querySnapshot = await getDocs(getCollectionRef('users'));
+        const querySnapshot = await getDocs(collection(db, 'users'));
         const users = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         localStorage.setItem('users_backup', JSON.stringify(users));
         return users;
@@ -1393,13 +1126,13 @@
         localStorage.setItem('students_backup', JSON.stringify(students));
         console.log('Respaldo guardado en localStorage');
         
-        if (!USE_FIRESTORE || !institutionId) {
+        if (!USE_FIRESTORE) {
           console.log('Usando localStorage - datos guardados');
           return;
         }
         
-        console.log('Guardando en Firestore para institución:', institutionId);
-        const studentsRef = getCollectionRef('students');
+        console.log('Guardando en Firestore...');
+        const studentsRef = collection(db, 'students');
         const snapshot = await getDocs(studentsRef);
         const currentIds = snapshot.docs.map(doc => doc.id);
         const newIds = students.map(s => s.id);
@@ -1407,14 +1140,14 @@
         
         if (toDelete.length > 0) {
           console.log('Eliminando documentos:', toDelete);
-          const deletePromises = toDelete.map(id => deleteDoc(getDocRef('students', id)));
+          const deletePromises = toDelete.map(id => deleteDoc(doc(db, 'students', id)));
           await Promise.all(deletePromises);
         }
         
         console.log('Guardando estudiantes en Firestore:', students);
         const promises = students.map(student => {
           const { id, ...data } = student;
-          return setDoc(getDocRef('students', id), data);
+          return setDoc(doc(db, 'students', id), data);
         });
         await Promise.all(promises);
         console.log('Estudiantes guardados exitosamente en Firestore');
@@ -1428,18 +1161,18 @@
       try {
         localStorage.setItem('invoices_backup', JSON.stringify(invoices));
         
-        if (!USE_FIRESTORE || !institutionId) return;
+        if (!USE_FIRESTORE) return;
         
-        const invoicesRef = getCollectionRef('invoices');
+        const invoicesRef = collection(db, 'invoices');
         const snapshot = await getDocs(invoicesRef);
         const currentIds = snapshot.docs.map(doc => doc.id);
         const newIds = invoices.map(s => s.id);
         const toDelete = currentIds.filter(id => !newIds.includes(id));
-        const deletePromises = toDelete.map(id => deleteDoc(getDocRef('invoices', id)));
+        const deletePromises = toDelete.map(id => deleteDoc(doc(db, 'invoices', id)));
         await Promise.all(deletePromises);
         const promises = invoices.map(invoice => {
           const { id, ...data } = invoice;
-          return setDoc(getDocRef('invoices', id), data);
+          return setDoc(doc(db, 'invoices', id), data);
         });
         await Promise.all(promises);
       } catch (error) {
@@ -1451,18 +1184,18 @@
       try {
         localStorage.setItem('payments_backup', JSON.stringify(payments));
         
-        if (!USE_FIRESTORE || !institutionId) return;
+        if (!USE_FIRESTORE) return;
         
-        const paymentsRef = getCollectionRef('payments');
+        const paymentsRef = collection(db, 'payments');
         const snapshot = await getDocs(paymentsRef);
         const currentIds = snapshot.docs.map(doc => doc.id);
         const newIds = payments.map(s => s.id);
         const toDelete = currentIds.filter(id => !newIds.includes(id));
-        const deletePromises = toDelete.map(id => deleteDoc(getDocRef('payments', id)));
+        const deletePromises = toDelete.map(id => deleteDoc(doc(db, 'payments', id)));
         await Promise.all(deletePromises);
         const promises = payments.map(payment => {
           const { id, ...data } = payment;
-          return setDoc(getDocRef('payments', id), data);
+          return setDoc(doc(db, 'payments', id), data);
         });
         await Promise.all(promises);
       } catch (error) {
@@ -1474,18 +1207,18 @@
       try {
         localStorage.setItem('users_backup', JSON.stringify(users));
         
-        if (!USE_FIRESTORE || !institutionId) return;
+        if (!USE_FIRESTORE) return;
         
-        const usersRef = getCollectionRef('users');
+        const usersRef = collection(db, 'users');
         const snapshot = await getDocs(usersRef);
         const currentIds = snapshot.docs.map(doc => doc.id);
         const newIds = users.map(s => s.id);
         const toDelete = currentIds.filter(id => !newIds.includes(id));
-        const deletePromises = toDelete.map(id => deleteDoc(getDocRef('users', id)));
+        const deletePromises = toDelete.map(id => deleteDoc(doc(db, 'users', id)));
         await Promise.all(deletePromises);
         const promises = users.map(user => {
           const { id, ...data } = user;
-          return setDoc(getDocRef('users', id), data);
+          return setDoc(doc(db, 'users', id), data);
         });
         await Promise.all(promises);
       } catch (error) {
@@ -2021,11 +1754,6 @@
     }
 
     // Expose functions to window for onclick handlers
-    // Exponer funciones de autenticación
-    window.switchAuthTab = switchAuthTab;
-    window.handleLogin = handleLogin;
-    window.handleSignup = handleSignup;
-    window.handlePasswordReset = handlePasswordReset;
     window.login = login;
     window.logout = logout;
     window.switchSection = switchSection;
