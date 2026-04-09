@@ -886,7 +886,7 @@
     console.log('db disponible:', typeof db !== 'undefined' ? 'SÍ' : 'NO');
     
     // Sistema híbrido: Firestore + localStorage como respaldo
-    const USE_FIRESTORE = typeof db !== 'undefined';
+    const USE_FIRESTORE = false; // Temporalmente usar localStorage hasta arreglar permisos
     
     console.log('Modo de almacenamiento:', USE_FIRESTORE ? 'FIRESTORE' : 'LOCALSTORAGE TEMPORARIO');
     

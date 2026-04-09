@@ -23,7 +23,6 @@ const app = initializeApp(firebaseConfig);
 // Servicios que vas a usar
 const analytics = getAnalytics(app);
 const db = getFirestore(app); // Base de datos (Firestore)
-const auth = getAuth(app);    // Autenticación
 
 // Exportar para usarlos en otros archivos
-export { app, analytics, db, auth };
+export { app, analytics, db };
