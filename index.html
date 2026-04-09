@@ -270,19 +270,23 @@
       .nav-item:hover { background: rgba(56,189,248,0.15); }
       tr:hover { background: rgba(255,255,255,0.03); }
     }
+    .table-wrapper {
+      width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
     table {
       width: 100%;
       border-collapse: collapse;
       font-size: 0.95rem;
-      overflow-x: auto;
-      display: block;
-      white-space: nowrap;
+      min-width: 500px;
     }
     th, td {
       padding: 14px 12px;
       text-align: left;
       border-bottom: 1px solid rgba(148,163,184,0.08);
-      min-width: 120px; /* Evita que las columnas sean demasiado estrechas */
+      white-space: normal;
+      word-break: break-word;
     }
     th {
       color: var(--text-muted);
@@ -431,6 +435,9 @@
       .modal-grid { grid-template-columns: 1fr; gap: 18px; }
       .form-row { flex-direction: column; gap: 12px; }
       input, select, textarea { font-size: 16px; min-height: 48px; }
+      table { min-width: 600px; font-size: 0.9rem; }
+      th, td { padding: 12px 10px; }
+      .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
     }
     @media (max-width: 720px) {
       .card-grid { grid-template-columns: 1fr; }
@@ -439,12 +446,13 @@
       .modal-grid { grid-template-columns: 1fr; gap: 16px; }
       .form-row { flex-direction: column; gap: 12px; }
       input, select, textarea { min-height: 48px; }
+      table { min-width: 600px; }
+      .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
     }
     @media (max-width: 480px) {
       .topbar h2 { font-size: 1.5rem; }
       .card p { font-size: 1.5rem; }
       .btn { padding: 12px 18px; font-size: 1rem; min-height: 48px; }
-      .panel table { overflow-x: auto; white-space: nowrap; display: block; }
       .modal { width: 95%; padding: 16px; max-height: 95vh; }
       .login-card { width: 90%; padding: 24px; }
       .sidebar { width: 250px; }
@@ -459,7 +467,9 @@
       .panel-header .panel-actions { justify-content: center; flex-wrap: wrap; }
       input, select, textarea { font-size: 16px; padding: 16px; min-height: 52px; }
       .modal-close { width: 44px; height: 44px; top: 12px; right: 12px; }
-      th, td { padding: 12px 8px; font-size: 0.9rem; min-width: 100px; }
+      table { min-width: 700px; font-size: 0.85rem; }
+      th, td { padding: 10px 8px; }
+      .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
     }
 
     /* Media query para teléfonos muy pequeños */
@@ -471,7 +481,9 @@
       .panel-header h3 { font-size: 1rem; }
       .btn { padding: 10px 16px; font-size: 0.9rem; min-height: 44px; }
       input, select, textarea { padding: 14px; min-height: 48px; }
-      th, td { padding: 10px 6px; font-size: 0.85rem; min-width: 80px; }
+      table { min-width: 700px; font-size: 0.8rem; }
+      th, td { padding: 8px 6px; font-size: 0.8rem; }
+      .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
       .brand h1 { font-size: 1rem; }
       .nav-item span { font-size: 0.9rem; }
       .card { padding: 12px; }
@@ -650,7 +662,7 @@
                 <option value="inactivo">Inactivo</option>
               </select>
             </div>
-            <div class="panel">
+            <div class="table-wrapper">
               <table>
                 <thead>
                   <tr>
@@ -682,7 +694,7 @@
               <input id="invoiceSearch" type="text" placeholder="Buscar por estudiante, concepto o NCF" oninput="renderInvoiceTable()" />
               <button class="btn btn-secondary" onclick="printInvoiceReport()">Reporte rápido</button>
             </div>
-            <div class="panel">
+            <div class="table-wrapper">
               <table>
                 <thead>
                   <tr>
@@ -712,7 +724,7 @@
             </div>
           </div>
           <div class="row">
-            <div class="panel">
+            <div class="table-wrapper">
               <table>
                 <thead>
                   <tr>
@@ -758,7 +770,7 @@
           </div>
           <div style="margin-top:22px;">
             <h3 style="margin-bottom:14px;">Estudiantes con saldo</h3>
-            <div class="panel">
+            <div class="table-wrapper">
               <table>
                 <thead>
                   <tr>
@@ -783,7 +795,7 @@
               <button class="btn btn-primary" onclick="openUserModal()">Agregar usuario</button>
             </div>
           </div>
-          <div class="panel">
+          <div class="table-wrapper">
             <table>
               <thead>
                 <tr>
